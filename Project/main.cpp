@@ -13,56 +13,107 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include <iostream>
+#include <vector>
 
 GLuint
 	VaoId,
 	VboId,
 	ColorBufferId,
 	ProgramId,
-	myMatrixLocation;
+	myMatrixLocation,
+	myColorLocation;
 
 glm::mat4
 	myMatrix,
-	transform,
 	resizeMatrix;
 
 float xMin = 0.0f, xMax = 260.0f, yMin = 0.0f, yMax = 130.0f;		//	Variabile pentru proiectia ortogonala;
 
+
+class Ball {
+public:
+	glm::vec4 initialPosition;
+	glm::vec4 currentPosition;
+	glm::mat4 transform;
+	glm::vec4 velocity;
+	float mass;
+	float acceleration;
+
+	Ball() {}
+
+	Ball(GLfloat x, GLfloat y) {
+		initialPosition[0] = x;
+		initialPosition[1] = y;
+		initialPosition[2] = 0;
+		initialPosition[3] = 1;
+
+		currentPosition[0] = x;
+		currentPosition[1] = y;
+		currentPosition[2] = 0;
+		currentPosition[3] = 1;
+
+		transform = glm::ortho(xMin, xMax, yMin, yMax);
+	}
+
+	void Move(GLfloat x, GLfloat y) {
+		transform = glm::translate(transform, glm::vec3(x, y, 0));
+		currentPosition = initialPosition * transform;
+	}
+};
+
+class Billiard {
+public:
+	Ball whiteBall;
+	std::vector<Ball> balls;
+	GLfloat* initialPositions;
+
+	Billiard(Ball whiteBall, std::vector<Ball> balls) {
+		this->whiteBall = whiteBall;
+		balls.insert(balls.begin(), whiteBall);
+		this->balls = balls;
+
+		initialPositions = new GLfloat[4 * (balls.size())];
+		
+		for (int i = 0; i < balls.size(); i++)
+			for (int j = 0; j < 4; j++)
+				initialPositions[i * 4 + j] = balls[i].initialPosition[j];
+	}
+
+	int GetBallsBytesSize() {
+		return balls.size() * 4 * sizeof(GLfloat);
+	}
+
+	~Billiard() {
+		delete[] initialPositions;
+	}
+};
+
+
+std::vector<Ball> balls = {
+		Ball(180, 65),
+		Ball(185, 62), Ball(185, 68),
+		Ball(190, 60), Ball(190, 65), Ball(190, 70)
+};
+
+Billiard billiard(Ball(60, 65), balls);
+
+
 void CreateVBO(void)
 {
-	// varfurile 
-	GLfloat Vertices[] = {
-		60.0f, 65.0f, 0.0f, 1.0f,
-		90.0f, 65.0f, 0.0f, 1.0f,
-	};
-
-	// culorile, ca atribute ale varfurilor
-	GLfloat Colors[] = {
-	  1.0f, 1.0f, 1.0f, 1.0f,
-	  1.0f, 1.0f, 1.0f, 1.0f,
-	};
-
 	// se creeaza un buffer nou
 	glGenBuffers(1, &VboId);
 	// este setat ca buffer curent
 	glBindBuffer(GL_ARRAY_BUFFER, VboId);
 	// varfurile sunt "copiate" in bufferul curent
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertices), Vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, billiard.GetBallsBytesSize(), billiard.initialPositions, GL_STATIC_DRAW);
 
 	// se creeaza / se leaga un VAO (Vertex Array Object) - util cand se utilizeaza mai multe VBO
 	glGenVertexArrays(1, &VaoId);
 	glBindVertexArray(VaoId);
+
 	// se activeaza lucrul cu atribute; atributul 0 = pozitie
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-
-	// un nou buffer, pentru culoare
-	glGenBuffers(1, &ColorBufferId);
-	glBindBuffer(GL_ARRAY_BUFFER, ColorBufferId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Colors), Colors, GL_STATIC_DRAW);
-	// atributul 1 =  culoare
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
 }
 void DestroyVBO(void)
@@ -96,19 +147,40 @@ void Initialize(void)
 	CreateShaders();	
 
 	myMatrixLocation = glGetUniformLocation(ProgramId, "myMatrix");
-	resizeMatrix = glm::ortho(xMin, xMax, yMin, yMax);
+	myColorLocation = glGetUniformLocation(ProgramId, "myColor");
 	myMatrix = resizeMatrix;
 }
+
 
 void RenderFunction(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	myMatrix = glm::translate(myMatrix, glm::vec3(0, 0, 0));
-	glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
 	glEnable(GL_POINT_SMOOTH);
-
 	glPointSize(15);
-	glDrawArrays(GL_POINTS, 0, 2);
+
+	// set white color
+	glUniform4f(myColorLocation, 1, 1, 1, 1);
+
+	//set transform
+	myMatrix = billiard.whiteBall.transform;
+	glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
+
+	//draw the white ball
+	glDrawArrays(GL_POINTS, 0, 1);
+
+	// drawing the rest of the balls ([0] is the white ball)
+	for (int i = 1; i < billiard.balls.size(); i++) {
+		// set red color
+		glUniform4f(myColorLocation, 1, 0, 0, 1);
+
+		//set transform
+		myMatrix = billiard.balls[i].transform;
+		glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
+
+		//draw the ball
+		glDrawArrays(GL_POINTS, i, 1);
+	}
+
 	glFlush();
 }
 void Cleanup(void)
