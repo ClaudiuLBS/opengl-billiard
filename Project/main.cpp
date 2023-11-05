@@ -28,7 +28,7 @@ GLuint
 	myMatrixLocation,
 	myColorLocation;
 
-glm::mat4 myMatrix,
+glm::mat4 myMatrix;
 
 
 // INUTIL
