@@ -107,7 +107,6 @@ void RenderFunction(void)
 	glPointSize(BALL_RADIUS * 2);
 
 
-	//std::cout << '\r' << billiard.balls.size();
 	// Calculate collisions
 	for (int i = 0; i < billiard.balls.size() - 1; i++)
 		for (int j = i + 1; j < billiard.balls.size(); j++) {
@@ -169,8 +168,9 @@ float GetMouseY(int y) {
 	return 1.0f - (2.0f * y / SCREEN_HEIGHT);
 }
 
+
 void MouseClick(int button, int state, int x, int y) {
-	int FORCE = 250;
+	int FORCE = 350;
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 		glm::vec4 ballPosition = billiard.WhiteBall().currentPosition;
 		glm::vec4 direction = { GetMouseX(x) - ballPosition[0], GetMouseY(y) - ballPosition[1], 0, 0};

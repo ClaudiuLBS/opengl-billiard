@@ -28,6 +28,7 @@ void Billiard::BallsCollision(int ball_1_idx, int ball_2_idx) {
 	float xDistance = abs(ball_1.currentPosition[0] - ball_2.currentPosition[0]);
 	float yDistance = abs(ball_1.currentPosition[1] - ball_2.currentPosition[1]);
 
+	auto distance = glm::distance(ball_1.currentPosition, ball_2.currentPosition);
 	//if (xDistance < tempVar / 4 || yDistance < tempVar / 2) return; // too close
 	if (xDistance > tempVar / 2 || yDistance > tempVar) return; // too far
 
